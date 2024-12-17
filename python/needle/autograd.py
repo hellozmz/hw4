@@ -1,6 +1,6 @@
 """Core data structures."""
 import needle
-from .backend_numpy import Device, cpu, all_devices
+# from .backend_numpy import Device, cpu, all_devices
 from typing import List, Optional, NamedTuple, Tuple, Union
 from collections import namedtuple
 import numpy
@@ -11,13 +11,16 @@ from needle import init
 LAZY_MODE = False
 TENSOR_COUNTER = 0
 
+# 非常重要，选择了自定义的后端，没有直接使用numpy作为后端。
+from .backend_selection import array_api, NDArray, default_device
+from .backend_selection import Device, cpu, all_devices
 # NOTE: we will import numpy as the array_api
 # as the backend for our computations, this line will change in later homeworks
 
-import numpy as array_api
-NDArray = numpy.ndarray
+# import numpy as array_api
+# NDArray = numpy.ndarray
 
-from .backend_selection import array_api, NDArray, default_device
+# from .backend_selection import array_api, NDArray
 
 class Op:
     """Operator definition."""
@@ -332,6 +335,9 @@ class Tensor(Value):
         else:
             return needle.ops.AddScalar(-other)(self)
 
+    def __rsub__(self, other):
+        return needle.ops.AddScalar(other)(needle.ops.Negate()(self))
+
     def __truediv__(self, other):
         if isinstance(other, Tensor):
             return needle.ops.EWiseDiv()(self, other)
@@ -359,11 +365,13 @@ class Tensor(Value):
     def transpose(self, axes=None):
         return needle.ops.Transpose(axes)(self)
 
-
-
-
     __radd__ = __add__
     __rmul__ = __mul__
+    # __rsub__ = __sub__
+    # __rmatmul__ = __matmul__
+
+
+
 
 def compute_gradient_of_variables(output_tensor, out_grad):
     """Take gradient of output node with respect to each node in node_list.
@@ -381,7 +389,15 @@ def compute_gradient_of_variables(output_tensor, out_grad):
     reverse_topo_order = list(reversed(find_topo_sort([output_tensor])))
 
     ### BEGIN YOUR SOLUTION
-    raise NotImplementedError()
+    ## 反向遍历，保证每个节点的梯度依赖的节点的梯度已经计算
+    for node in reverse_topo_order:
+        node.grad = sum_node_list(node_to_output_grads_list[node])
+        if not node.is_leaf():
+            gradients = node.op.gradient_as_tuple(node.grad, node)
+            for i, son_node in enumerate(node.inputs):
+                node_to_output_grads_list.setdefault(son_node, [])
+                node_to_output_grads_list[son_node].append(gradients[i])
+
     ### END YOUR SOLUTION
 
 
@@ -394,14 +410,25 @@ def find_topo_sort(node_list: List[Value]) -> List[Value]:
     sort.
     """
     ### BEGIN YOUR SOLUTION
-    raise NotImplementedError()
+    topo_order = []
+    visited = set()
+    for node in node_list:
+        if node not in visited:
+            topo_sort_dfs(node, visited, topo_order)
+    return topo_order
     ### END YOUR SOLUTION
 
 
 def topo_sort_dfs(node, visited, topo_order):
     """Post-order DFS"""
     ### BEGIN YOUR SOLUTION
-    raise NotImplementedError()
+    for input_node in node.inputs:
+        if input_node not in visited:
+            topo_sort_dfs(input_node, visited, topo_order)
+    if node not in visited:
+        visited.add(node)
+        topo_order.append(node)
+
     ### END YOUR SOLUTION
 
 

@@ -6,7 +6,7 @@ BACKEND = os.environ.get("NEEDLE_BACKEND", "nd")
 
 
 if BACKEND == "nd":
-    print("Using needle backend")
+    print("Using needle backend", flush=True)
     from . import backend_ndarray as array_api
     from .backend_ndarray import (
         all_devices,
@@ -19,7 +19,7 @@ if BACKEND == "nd":
 
     NDArray = array_api.NDArray
 elif BACKEND == "np":
-    print("Using numpy backend")
+    print("Using numpy backend", flush=True)
     import numpy as array_api
     from .backend_numpy import all_devices, cpu, default_device, Device
 

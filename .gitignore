@@ -1,0 +1,14 @@
+build/
+python/needle/__pycache__/
+python/needle/backend_ndarray/__pycache__/
+python/needle/backend_ndarray/ndarray_backend_cpu.cpython-310-x86_64-linux-gnu.so
+python/needle/backend_ndarray/ndarray_backend_cpu.cpython-311-x86_64-linux-gnu.so
+python/needle/backend_ndarray/ndarray_backend_cuda.cpython-311-x86_64-linux-gnu.so
+python/needle/data/__pycache__/
+python/needle/data/datasets/__pycache__/
+python/needle/init/__pycache__/
+python/needle/nn/__pycache__/
+python/needle/ops/__pycache__/
+tests/hw3/__pycache__/
+*__pycache__
+data
