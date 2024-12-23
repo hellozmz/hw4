@@ -40,10 +40,10 @@ def test_cifar10_loader(batch_size, train, device):
     train_loader = ndl.data.DataLoader(cifar10_train_dataset, batch_size)
     for (X, y) in train_loader:
         break
-    assert isinstance(X.cached_data, nd.NDArray)
-    assert isinstance(X, ndl.Tensor)
-    assert isinstance(y, ndl.Tensor)
-    assert X.dtype == 'float32'
+    assert isinstance(X.cached_data, nd.NDArray), f"Expected X.cached_data to be nd.NDArray, but got {type(X.cached_data)}"
+    assert isinstance(X, ndl.Tensor), f"Expected X to be ndl.Tensor, but got {type(X)}"
+    assert isinstance(y, ndl.Tensor), f"Expected y to be ndl.Tensor, but got {type(y)}"
+    assert X.dtype == 'float32', f"Expected X dtype to be 'float32', but got {X.dtype}"
 
 
 BPTT = [3, 32]

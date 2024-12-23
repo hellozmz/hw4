@@ -9,3 +9,5 @@ from . import data
 from . import nn
 from . import optim
 from .backend_selection import *
+
+print(f"DEBUG: Using backend {BACKEND}", flush=True)
