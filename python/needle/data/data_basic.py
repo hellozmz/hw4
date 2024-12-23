@@ -73,7 +73,9 @@ class DataLoader:
         if self.index >= len(self.ordering):
             raise StopIteration
         else:
-            batch = [Tensor.make_const(x) for x in self.dataset[self.ordering[self.index]]]
+            # 使用Tensor.make_const(x)会报错，原因是内部实现是使用的numpy的array，而不是内部定义的NDArray
+            # batch = [Tensor.make_const(x) for x in self.dataset[self.ordering[self.index]]]
+            batch = [Tensor(x) for x in self.dataset[self.ordering[self.index]]]
             self.index += 1
             return batch
         ### END YOUR SOLUTION

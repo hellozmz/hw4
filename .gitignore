@@ -11,4 +11,4 @@ python/needle/nn/__pycache__/
 python/needle/ops/__pycache__/
 tests/hw3/__pycache__/
 *__pycache__
-data
+data/
