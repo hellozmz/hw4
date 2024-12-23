@@ -169,8 +169,9 @@ class BatchNorm1d(Module):
     def forward(self, x: Tensor) -> Tensor:
         ### BEGIN YOUR SOLUTION
         batch_size, layer_size = x.shape
+        weight_broadcast = self.weight.reshape((1, self.dim))
+        # bias_broadcast = self.bias.broadcast_to((batch_size, layer_size))
         weight_broadcast = self.weight.broadcast_to((batch_size, layer_size))
-        bias_broadcast = self.bias.broadcast_to((batch_size, layer_size))
         if self.training:
             batch_mean = (x.sum(axes=(0,))/batch_size)
             self.running_mean = (self.running_mean * (1 - self.momentum) + batch_mean * self.momentum).detach()
@@ -185,6 +186,16 @@ class BatchNorm1d(Module):
             return weight_broadcast * std_x + bias_broadcast
         ### END YOUR SOLUTION
 
+class BatchNorm2d(BatchNorm1d):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def forward(self, x: Tensor):
+        # nchw -> nhcw -> nhwc
+        s = x.shape
+        _x = x.transpose((1, 2)).transpose((2, 3)).reshape((s[0] * s[2] * s[3], s[1]))
+        y = super().forward(_x).reshape((s[0], s[2], s[3], s[1]))
+        return y.transpose((2,3)).transpose((1,2))
 
 
 class LayerNorm1d(Module):
