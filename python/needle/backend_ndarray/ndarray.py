@@ -300,14 +300,34 @@ class NDArray:
         """
 
         ### BEGIN YOUR SOLUTION
-        assert all(
-            new_shape[i] == self.shape[i] or self.shape[i] == 1
-            for i in range(len(self.shape))
-        ), "Invalid broadcast shape"
-        new_strides = tuple(
-            self.strides[i] if self.shape[i] == new_shape[i] else 0 for i in range(len(self.shape))
-        )
-        return self.compact().as_strided(new_shape, new_strides)
+        # assert all(
+        #     new_shape[i] == self.shape[i] or self.shape[i] == 1
+        #     for i in range(len(self.shape))
+        # ), "Invalid broadcast shape"
+        # new_strides = tuple(
+        #     self.strides[i] if self.shape[i] == new_shape[i] else 0 for i in range(len(self.shape))
+        # )
+        # return self.compact().as_strided(new_shape, new_strides)
+        
+        assert len(new_shape) >= len(self.shape), "Cannot broadcast to fewer dimensions"
+
+        padded_shape = [1] * (len(new_shape) - len(self.shape)) + list(self.shape)
+        padded_strides = [0] * (len(new_shape) - len(self.shape)) + list(self.strides)
+
+        assert all(shape == new_shape[i] for i, shape in enumerate(padded_shape) if shape != 1), "Mismatched broadcast dimension"
+
+        for i in range(len(new_shape)):
+            if padded_shape[i] != 1 or new_shape[i] == 1:
+                continue
+            padded_strides[i] = 0
+
+        return NDArray.make(
+            new_shape,
+            strides=tuple(padded_strides),
+            device=self._device,
+            handle=self._handle,
+            offset=self._offset,
+        ).compact()
         ### END YOUR SOLUTION
 
     ### Get and set elements

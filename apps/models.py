@@ -9,7 +9,7 @@ np.random.seed(0)
 class ConvBN(ndl.nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size, stride=1, bias=True, device=None, dtype="float32"):
         super().__init__()
-        self.conv = ndl.nn.Conv(in_channels = in_channels, out_channels = out_channels, kernel_size = kernel_size, stride = stride, bias = bias, device = device, dtype = dtype)
+        self.conv = ndl.nn.Conv(in_channels = in_channels, out_channels = out_channels, kernel_size = kernel_size, stride = stride, device = device, dtype = dtype)
         self.batch_norm = ndl.nn.BatchNorm2d(dim=out_channels, device=device, dtype=dtype)
         self.relu = ndl.nn.ReLU()
         
@@ -21,8 +21,8 @@ class ConvBN(ndl.nn.Module):
 class ResNet9(ndl.nn.Module):
     def __init__(self, device=None, dtype="float32"):
         super().__init__()
-        bias = True
         ### BEGIN YOUR SOLUTION ###
+        bias = True
         self.conv1 = ConvBN(3, 16, 7, 4, bias=bias, device=device, dtype=dtype)
         self.conv2 = ConvBN(16, 32, 3, 2, bias=bias, device=device, dtype=dtype)
         self.res = ndl.nn.Residual(
@@ -76,11 +76,29 @@ class LanguageModel(nn.Module):
         """
         super(LanguageModel, self).__init__()
         ### BEGIN YOUR SOLUTION
+        # self.embedding = nn.Embedding(output_size, embedding_size, device=device, dtype=dtype)
+        # if seq_model == 'rnn':
+        #     self.model = nn.RNN(embedding_size, hidden_size, num_layers, device=device, dtype=dtype)
+        # elif seq_model == 'lstm':
+        #     self.model = nn.LSTM(embedding_size, hidden_size, num_layers, device=device, dtype=dtype)
+        
+        self.seq_model = seq_model
+        self.hidden_size = hidden_size
+
         self.embedding = nn.Embedding(output_size, embedding_size, device=device, dtype=dtype)
-        if seq_model == 'rnn':
-            self.model = nn.RNN(embedding_size, hidden_size, num_layers, device=device, dtype=dtype)
-        elif seq_model == 'lstm':
-            self.model = nn.LSTM(embedding_size, hidden_size, num_layers, device=device, dtype=dtype)
+        self.model = nn.RNN(
+            embedding_size, 
+            hidden_size, 
+            num_layers, 
+            device=device, 
+            dtype=dtype,
+        ) if seq_model == 'rnn' else nn.LSTM(
+            embedding_size, 
+            hidden_size,
+            num_layers,
+            device=device, 
+            dtype=dtype,
+        )
         self.linear = nn.Linear(hidden_size, output_size, device=device, dtype=dtype)
         ### END YOUR SOLUTION
 
@@ -98,12 +116,21 @@ class LanguageModel(nn.Module):
             else h is tuple of (h0, c0), each of shape (num_layers, bs, hidden_size)
         """
         ### BEGIN YOUR SOLUTION
-        x = self.embedding(x) # (seq_len, bs, embedding_size)
-        out, h = self.model(x, h)
-        seq_len, bs, hidden_size = out.shape
-        out = out.reshape((seq_len * bs, hidden_size))
-        out = self.linear(out)
-        return out, h
+        # x = self.embedding(x) # (seq_len, bs, embedding_size)
+        # out, h = self.model(x, h)
+        # seq_len, bs, hidden_size = out.shape
+        # out = out.reshape((seq_len * bs, hidden_size))
+        # out = self.linear(out)
+        # print(f"out.shape: {out.shape}, h.shape: {h.shape}")
+        # return out, h
+        
+        seq_len, bs = x.shape
+
+        x = self.embedding(x) # (seq_len, bs, embedding_dim)
+        x, h = self.model(x, h) # (seq_len, bs, hidden_size), ...
+        x = self.linear(x.reshape((seq_len * bs, self.hidden_size)))
+
+        return x, h
         ### END YOUR SOLUTION
 
 

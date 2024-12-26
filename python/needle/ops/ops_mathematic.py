@@ -201,7 +201,45 @@ def reshape(a, shape):
     return Reshape(shape)(a)
 
 
+
 class BroadcastTo(TensorOp):
+    def __init__(self, shape):
+        self.shape = shape
+
+    def _get_summed_dims(self, old_shape, new_shape):
+        if len(old_shape) == 0:
+            return tuple(range(len(new_shape)))
+
+        broadcasted = [True for _ in new_shape]
+        for old_idx in reversed(range(len(old_shape))):
+            new_idx = old_idx + len(new_shape) - len(old_shape)
+
+            if old_shape[old_idx] == new_shape[new_idx]:
+                broadcasted[new_idx] = False
+                continue
+
+            assert old_shape[old_idx] == 1, "Should never happen"
+
+        return tuple(i for i, is_broadcast in enumerate(broadcasted) if is_broadcast)
+
+    def compute(self, a):
+        ### BEGIN YOUR SOLUTION
+        return array_api.broadcast_to(a, self.shape)
+        ### END YOUR SOLUTION
+
+    def gradient(self, out_grad, node):
+        ### BEGIN YOUR SOLUTION
+        a = node.inputs[0]
+
+        if out_grad.shape != a.shape:
+            summed_dims = self._get_summed_dims(a.shape, out_grad.shape)
+            out_grad = out_grad.sum(summed_dims).reshape(a.shape)
+
+        return out_grad
+        ### END YOUR SOLUTION
+
+
+class BroadcastTo_BK(TensorOp):
     def __init__(self, shape):
         self.shape = shape
 
@@ -272,7 +310,7 @@ def summation(a, axes=None):
     return Summation(axes)(a)
 
 
-class MatMul(TensorOp):
+class MatMul_BK(TensorOp):
     def compute(self, a, b):
         # print(f"come into MatMul", flush=True)
         ### BEGIN YOUR SOLUTION
@@ -289,6 +327,36 @@ class MatMul(TensorOp):
         if gradient_b.shape != b.shape:
             gradient_b = summation(gradient_b, tuple(range(len(gradient_b.shape) - len(b.shape))))
         return gradient_a, gradient_b
+
+class MatMul(TensorOp):
+
+    def _align_shape(self, x, y):
+      if x.shape == y.shape:
+        return x
+
+      summed_axes = tuple(range(len(x.shape) - len(y.shape)))
+      assert len(summed_axes) > 0
+      return x.sum(summed_axes)
+
+    def compute(self, a, b):
+        ### BEGIN YOUR SOLUTION
+        return a @ b
+        ### END YOUR SOLUTION
+
+    def gradient(self, out_grad, node):
+        ### BEGIN YOUR SOLUTION
+        a, b = node.inputs[0], node.inputs[1]
+        a_grad = out_grad @ b.transpose()
+        b_grad = a.transpose() @ out_grad
+
+        a_grad = self._align_shape(a_grad, a)
+        b_grad = self._align_shape(b_grad, b)
+
+        assert a.shape == a_grad.shape
+        assert b.shape == b_grad.shape
+
+        return a_grad, b_grad
+        ### END YOUR SOLUTION
 
 def matmul(a, b):
     return MatMul()(a, b)
@@ -352,7 +420,7 @@ class ReLU(TensorOp):
 
     def gradient(self, out_grad, node):
         ### BEGIN YOUR SOLUTION
-        relu_mask = Tensor((node.inputs[0].cached_data > 0).astype(array_api.float32))
+        relu_mask = Tensor((node.inputs[0].cached_data > 0), device=out_grad.device, dtype=out_grad.dtype)
         return out_grad * relu_mask
         ### END YOUR SOLUTION
 
@@ -390,7 +458,7 @@ class Stack(TensorOp):
         self.axis = axis
 
     def compute(self, args: TensorTuple) -> Tensor:
-        print(f"come into STACK", flush=True)
+        # print(f"come into STACK", flush=True)
         ### BEGIN YOUR SOLUTION
         if len(args) > 0:
             shape = args[0].shape

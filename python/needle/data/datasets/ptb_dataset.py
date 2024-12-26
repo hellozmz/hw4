@@ -121,7 +121,16 @@ def get_batch(batches, i, bptt, device=None, dtype=None):
     target - Tensor of shape (bptt*bs,) with cached data as NDArray
     """
     ### BEGIN YOUR SOLUTION
-    data = batches[i: i + bptt, :]
-    target = batches[i + 1: i + 1 + bptt, :]
-    return Tensor(data, device=device, dtype=dtype), Tensor(target.flatten(), device=device, dtype=dtype)
+    # data = batches[i: i + bptt, :]
+    # target = batches[i + 1: i + 1 + bptt, :]
+    # return Tensor(data, device=device, dtype=dtype), Tensor(target.flatten(), device=device, dtype=dtype)
+    tot_seqlen = batches.shape[0]
+    assert i < tot_seqlen - 1
+    if i + bptt + 1 > tot_seqlen:
+        X = batches[i : -1, :]
+        y = batches[i+1 : , :].flatten()
+    else:
+        X = batches[i : i + bptt, :]
+        y = batches[i + 1: i + 1 + bptt, :].flatten()
+    return Tensor(X, device=device, dtype=dtype), Tensor(y, device=device, dtype=dtype)
     ### END YOUR SOLUTION

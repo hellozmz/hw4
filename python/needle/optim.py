@@ -25,7 +25,18 @@ class SGD(Optimizer):
 
     def step(self):
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        for w in self.params:
+            if w.grad is None:
+                continue
+
+            grad = w.grad.data + max(self.weight_decay, 0.) * w.data
+            self.u[w] = self.momentum * self.u.get(w, 0.) + (1 - self.momentum) * grad
+
+            w.data = ndl.Tensor(
+                w.data - self.lr * self.u[w],
+                dtype = w.data.dtype,
+                device = w.data.device,
+            )
         ### END YOUR SOLUTION
 
     def clip_grad_norm(self, max_norm=0.25):
@@ -33,7 +44,11 @@ class SGD(Optimizer):
         Clips gradient norm of parameters.
         """
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        for param in self.params:
+            raw = param.grad.realize_cached_data()
+            raw[raw > max_norm] = max_norm
+            raw[raw < -max_norm] = -max_norm
+            param.grad.data = ndl.Tensor(raw, dtype=param.grad.dtype, device=param.grad.device)
         ### END YOUR SOLUTION
 
 
@@ -60,5 +75,21 @@ class Adam(Optimizer):
 
     def step(self):
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        self.t += 1
+        for w in self.params:
+            if w.grad is None:
+                continue
+
+            grad = w.grad.data + max(self.weight_decay, 0.) + w.data
+            self.m[w] = self.beta1 * self.m.get(w, 0.) + (1 - self.beta1) * grad
+            self.v[w] = self.beta2 * self.v.get(w, 0.) + (1 - self.beta2) * grad ** 2
+
+            m_hat = self.m[w] / (1 - self.beta1 ** self.t)
+            v_hat = self.v[w] / (1 - self.beta2 ** self.t)
+
+            w.data = ndl.Tensor(
+                w.data - self.lr * m_hat / (v_hat ** 0.5 + self.eps),
+                dtype = w.data.dtype,
+                device = w.data.device,
+            )
         ### END YOUR SOLUTION

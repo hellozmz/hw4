@@ -170,6 +170,87 @@ def test_init_kaiming_uniform(device):
     assert abs(A.sum().numpy() - -2.5719218) < 1e-4
 
 
+# '''
+
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+class ConvBN(nn.Module):
+    def __init__(self, in_channels, out_channels, kernel_size, stride=1, bias=True, device=None, dtype=torch.float32):
+        super().__init__()
+        self.conv = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size, stride=stride, padding=kernel_size//2, bias=bias)
+        self.batch_norm = nn.BatchNorm2d(num_features=out_channels)
+        self.relu = nn.ReLU()
+        # if device is not None:
+        #     self.conv = self.conv.to(device)
+        #     self.batch_norm = self.batch_norm.to(device)
+        #     self.relu = self.relu.to(device)
+        # if dtype is not None:
+        #     self.conv = self.conv.to(dtype=dtype)
+        #     self.batch_norm = self.batch_norm.to(dtype=dtype)
+        #     self.relu = self.relu.to(dtype=dtype)
+
+        
+    def forward(self, x):
+        return self.relu(self.batch_norm(self.conv(x)))
+
+class Residual(nn.Module):
+    def __init__(self, module):
+        super().__init__()
+        self.module = module
+
+    def forward(self, x):
+        return x + self.module(x)
+
+class ResNet9_base(nn.Module):
+    def __init__(self, device=None, dtype=torch.float32):
+        super().__init__()
+        bias = True
+        self.conv1 = ConvBN(3, 16, 7, 4, bias=bias, device=device, dtype=dtype)
+        self.conv2 = ConvBN(16, 32, 3, 2, bias=bias, device=device, dtype=dtype)
+        self.res = Residual(
+            nn.Sequential(
+                ConvBN(32, 32, 3, 1, bias=bias, device=device, dtype=dtype),
+                ConvBN(32, 32, 3, 1, bias=bias, device=device, dtype=dtype)
+            )
+        )
+        self.conv3 = ConvBN(32, 64, 3, 2, bias=bias, device=device, dtype=dtype)
+        self.conv4 = ConvBN(64, 128, 3, 2, bias=bias, device=device, dtype=dtype)
+        self.res2 = Residual(
+            nn.Sequential(
+                ConvBN(128, 128, 3, 1, bias=bias, device=device, dtype=dtype),
+                ConvBN(128, 128, 3, 1, bias=bias, device=device, dtype=dtype)
+            )
+        )
+        self.flatten = nn.Flatten()
+        self.linear = nn.Linear(128, 128, bias=bias)  # Assuming input size is 32x32
+        self.relu = nn.ReLU()
+        self.linear2 = nn.Linear(128, 10, bias=bias)
+        # if device is not None:
+        #     self.linear = self.linear.to(device)
+        #     self.relu = self.relu.to(device)
+        #     self.linear2 = self.linear2.to(device)
+        # if dtype is not None:
+        #     self.linear = self.linear.to(dtype=dtype)
+        #     self.relu = self.relu.to(dtype=dtype)
+        #     self.linear2 = self.linear2.to(dtype=dtype)
+
+    def forward(self, x):
+        x = self.conv1(x)
+        x = self.conv2(x)
+        x = self.res(x)
+        x = self.conv3(x)
+        x = self.conv4(x)
+        x = self.res2(x)
+        x = self.flatten(x)
+        x = self.linear(x)
+        x = self.relu(x)
+        x = self.linear2(x)
+        return x
+
+# '''
+
 @pytest.mark.parametrize("device", _DEVICES)
 def test_resnet9(device):
     def num_params(model):
@@ -182,8 +263,18 @@ def test_resnet9(device):
     assert num_params(model) == 431946
 
     _A = np.random.randn(2, 3, 32, 32)
+    print(f"_A.dtype: {_A.dtype}")
     A = ndl.Tensor(_A, device=device)
+    print(f"A.dtype: {A.dtype}")
     y = model(A)
+    # model_base = ResNet9_base(device=device)
+    # y_base = model_base(torch.tensor(_A, device="cpu" if device == ndl.cpu() else "cuda", dtype=torch.float32))
+    # print("base:")
+    # print(y_base.shape)
+    # print(y_base.detach().numpy())
+    print("test:")
+    print(y.shape)
+    print(y.numpy())
 
     assert np.linalg.norm(np.array([[-1.8912625 ,  0.64833605,  1.9400386 ,  1.1435282 ,  1.89777   ,
          2.9039745 , -0.10433993,  0.35458302, -0.5684191 ,  2.6178317 ],
